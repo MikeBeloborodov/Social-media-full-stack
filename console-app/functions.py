@@ -54,9 +54,12 @@ def render_main_menu(user: dict):
         logged_in_user_screen(user)
 
 def render_all_posts():
-    posts = requests.get(POSTS).json()
+    posts = requests.get(POSTS)
     clear_console()
-    for post in posts:
+    if posts.status_code != 200:
+        print("No posts found.")
+        return False
+    for post in posts.json():
         print("+----------------+")
         print(f"Id - {post['post_id']}")
         print(f"Sender name - {post['sender_name']} ({post['email']})")
@@ -64,20 +67,17 @@ def render_all_posts():
         print(f"Text - {post['content']}")
         print(f"Likes - {post['likes']}")
         print(f"Created - {post['date_created']}")
+    return True
 
-def register_new_user(name: str, email: str, password: str):
+def register_new_user(name: str, email: str, password: str) -> int:
     user_registry = {"name" : name, "email" : email, "password" : password}
-    answer = requests.post(REGISTER, json=user_registry).json()
-    try:
-        if answer[0]['name'] == name:
-            return True
-        else:
-            return answer
-    except Exception as error:
-        print(f"Error: {error}")
-        prtin("Try again.")
-        press_any_key()
-        return
+    answer = requests.post(REGISTER, json=user_registry)
+    if answer.status_code == 201:
+        return 1
+    elif answer.status_code == 422:
+        return 2
+    else:
+        return 3
 
 def user_choice_view_all_posts():
     render_all_posts()
@@ -89,29 +89,26 @@ def user_choice_register_new_user():
     password = input("Enter your password: ")
     email = input("Enter your email: ")
     answer = register_new_user(name, email, password)
-    if answer == True:
+    if answer == 1:
         print("Congratulations! You have been registred.")
         print("Now you can log in with your email and password.")
         print(f"Email -  {email}")
         print(f"Password - {password}")
         press_any_key()
+    elif answer == 2:
+        print("Wrong email address, please type it correctly.")
+        press_any_key()
     else:
-        print("Something went wrong...")
-        print(f"You can read the error code: {answer}")
+        print("Something went wrong...Try again.")
         press_any_key()
 
 def validate_user_login(user: dict, email: str, password: str):
     user_credentials = {"email" : email, "password" : password}
     answer = requests.post(LOGIN, json=user_credentials)
-    try:
-        if answer.json()[0]['email'] == email:
-            user.update(answer.json()[0])
-            return True
-        else:
-            return False
-    except Exception as error:
-        print(f"User credentials error: {error}")
-        press_any_key()
+    if answer.status_code == 200:
+        user.update(answer.json()[0])
+        return True
+    else:
         return False
 
 def user_choice_login(user: dict):
@@ -125,7 +122,7 @@ def user_choice_login(user: dict):
         press_any_key()
         return
     else:
-        print("Something went wrong... Try again.")
+        print("Wrong credentials. Try again")
         press_any_key()
 
 def user_choice_logout(user: dict):
@@ -134,15 +131,9 @@ def user_choice_logout(user: dict):
 def send_post_to_db(title: str, content: str, user):
     new_post_data = {"title" : title, "content" : content, "owner_email" : user['email']}
     answer = requests.post(POSTS, json=new_post_data)
-    try:
-        if answer.json()[0]['title'] == title:
-            return True
-        else:
-            return False
-    except Exception as error:
-        print("Something went wrong... ")
-        print(f"Error: {error}") 
-        press_any_key()
+    if answer.status_code == 201:
+        return True
+    else:
         return False
 
 def user_choice_create_post(user):
@@ -159,23 +150,32 @@ def user_choice_create_post(user):
         print("There was an error, please try again.")
         press_any_key()
 
-def send_user_like_to_db(user, post_id):
+def send_user_like_to_db(user, post_id) -> int:
     answer = requests.patch(LIKE + str(post_id) + f"?user_email={user['email']}")
-    try:
-        if answer.json()[0]['id'] == int(post_id):
-            return True
-        else:
-            return False
-    except Exception as error:
-        print(f"Error: {error}")
-        return False
+    if answer.status_code == 201:
+        return 1
+    elif answer.status_code == 404:
+        return 2
+    elif answer.status_code == 422:
+        return 3
+    else:
+        return 4
 
 def user_choice_like_post(user: dict):
-    render_all_posts()
+    posts = render_all_posts()
+    if not posts:
+        press_any_key()
+        return
     post_id = input("\nEnter id of a post to like: ")
     answer = send_user_like_to_db(user, post_id)
-    if answer:
+    if answer == 1:
         print("You have succesfully liked post.")
+        press_any_key()
+    elif answer == 2:
+        print("This post doesn't exist!")
+        press_any_key()
+    elif answer == 3:
+        print("Wrong id!")
         press_any_key()
     else:
         print("You have already liked this post before!")
