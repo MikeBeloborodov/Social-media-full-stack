@@ -90,3 +90,22 @@ def save_post_to_db(connection, cursor, new_post: Post) -> list:
 	except Exception as execution_error:
 		print(f"[!] COULD NOT CREATE NEW POST: {execution_error}")
 		return [{"Message" : "Something went wrong... DB execution error"}]
+
+def update_post_in_db(connection, cursor, updated_post: Post) -> list:
+	# execution check	
+	try:
+		cursor.execute(f"""
+						UPDATE posts 
+						SET title = '{updated_post.title}',
+							content = '{updated_post.content}',
+							date_updated = NOW()
+						WHERE owner_id = {updated_post.owner_id}
+						RETURNING title, content
+		""")
+		returning_post = cursor.fetchall()
+		connection.commit()
+		print(f"[+] UPDATED POST ID {updated_post.owner_id}- {updated_post.title}")
+		return returning_post
+	except Exception as execution_error:
+		print(f"[!] COULD NOT UPDATE POST: {execution_error}")
+		return [{"Message" : "Something went wrong... DB execution error"}]

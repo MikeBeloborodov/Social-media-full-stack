@@ -11,7 +11,7 @@ connection, cursor = postgre_database_connection()
 def send_index_page():
 	return {"Message" : "Front page"}
 
-# sends all post 
+# sends all posts
 @app.get("/posts")
 def send_all_posts():
 	return return_all_posts(connection, cursor)
@@ -25,6 +25,11 @@ def send_post_by_id(id: str):
 @app.post("/posts")
 def create_new_post(new_post: Post):
 	return save_post_to_db(connection, cursor, new_post)
+
+# updates post by id
+@app.patch("/posts/{id}")
+def update_post_by_id(updated_post: Post):
+	return update_post_in_db(connection, cursor, updated_post)
 
 # registers new user
 @app.post("/register")
