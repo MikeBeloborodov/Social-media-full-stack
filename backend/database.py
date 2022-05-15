@@ -25,8 +25,16 @@ def return_all_posts(connection, cursor) -> list:
 	# execution check
 	try:
 		cursor.execute("""
-						SELECT * 
-						FROM posts
+						SELECT x.id as post_id, 
+							title, 
+							content, 
+							name as sender_name,
+							email,
+							date_created,
+							date_updated,
+							likes
+							FROM posts x JOIN users y ON x.owner_email = y.email
+							ORDER BY date_created
 	""")
 		posts = cursor.fetchall()
 		print("[+] SENDING ALL POSTS FROM DB")
@@ -36,13 +44,6 @@ def return_all_posts(connection, cursor) -> list:
 		return []
 
 def return_post_by_id(connection, cursor, id) -> list:
-	# type check
-	try:
-		int(id)
-	except Exception as type_error:
-		print(f"[!] WRONG TYPE FOR ID:{type_error}")
-		return [{"Message" : "Wrong type for id, should be an integer"}]
-	
 	# execution check
 	try:
 		cursor.execute(f"""
@@ -63,8 +64,8 @@ def save_user_to_db(connection, cursor, new_user: User) -> list:
 	# execution check	
 	try:
 		cursor.execute(f"""
-						INSERT INTO users (name, email)
-						VALUES ('{new_user.name}', '{new_user.email}')
+						INSERT INTO users (name, email, password)
+						VALUES ('{new_user.name}', '{new_user.email}', {new_user.password})
 						RETURNING name, email
 		""")
 		user = cursor.fetchall()
@@ -155,3 +156,25 @@ def delete_post_from_db(connection, cursor, id, user: User):
 	except Exception as execution_error:
 		print(f"[!] COULD NOT UPDATE POST: {execution_error}")
 		return [{"Message" : "Something went wrong... DB execution error"}]
+
+def check_user_credentials(connection, cursor, user_credentials: Login_user):
+	# validation check
+	try:
+		cursor.execute(f"""
+						SELECT * 
+						FROM users
+						WHERE email = '{user_credentials.email}' and
+						password = '{user_credentials.password}'
+		""")
+		found_users = cursor.fetchall()
+		if not found_users:
+			print(f"[!] VALIDATION ERROR FROM USER {user_credentials.email} TO LOGIN")
+			return [{"Message" : "Validation error, wrong email or password"}]
+	except Exception as execution_error:
+		print(f"[!] COULD NOT LOGIN USER: {execution_error}")
+		return [{"Message" : "Something went wrong... DB execution error"}]
+	
+	return [{"email" : found_users[0]['email'], 
+			"name" : found_users[0]['name'],
+			"id" : found_users[0]['id'],
+			"registration_date" : found_users[0]['data_registred']}]

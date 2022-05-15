@@ -18,7 +18,7 @@ def send_all_posts():
 
 # sends post by id
 @app.get("/posts/{id}")
-def send_post_by_id(id: str):
+def send_post_by_id(id: int):
 	return return_post_by_id(connection, cursor, id)
 
 # creates new post
@@ -40,3 +40,8 @@ def delete_post_by_id(id: int, user: User):
 @app.post("/register")
 def create_new_user(new_user: User):
 	return save_user_to_db(connection, cursor, new_user)
+
+# login a user
+@app.post("/login")
+def login_user(user_credentials: Login_user):
+	return check_user_credentials(connection, cursor, user_credentials)
