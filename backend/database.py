@@ -46,11 +46,11 @@ def return_all_posts(connection, cursor) -> list:
 def return_post_by_id(connection, cursor, id) -> list:
 	# execution check
 	try:
-		cursor.execute(f"""
+		cursor.execute("""
 						SELECT *
 						FROM posts
-						WHERE id = {id}
-		""")
+						WHERE id = %s
+		""", (str(id)))
 		post = cursor.fetchall()
 		if not post:
 			return [{"Message" : f"There is not post with id {id}"}]
@@ -63,11 +63,11 @@ def return_post_by_id(connection, cursor, id) -> list:
 def save_user_to_db(connection, cursor, new_user: User) -> list:
 	# execution check	
 	try:
-		cursor.execute(f"""
+		cursor.execute("""
 						INSERT INTO users (name, email, password)
-						VALUES ('{new_user.name}', '{new_user.email}', {new_user.password})
+						VALUES (%s, %s, %s)
 						RETURNING name, email
-		""")
+		""", (new_user.name, new_user.email, new_user.password))
 		user = cursor.fetchall()
 		connection.commit()
 		print(f"[+] CREATED NEW USER - {new_user.name} {new_user.email}")
@@ -79,11 +79,11 @@ def save_user_to_db(connection, cursor, new_user: User) -> list:
 def save_post_to_db(connection, cursor, new_post: Post) -> list:
 	# execution check	
 	try:
-		cursor.execute(f"""
+		cursor.execute("""
 						INSERT INTO posts (title, content, owner_email)
-						VALUES ('{new_post.title}', '{new_post.content}', '{new_post.owner_email}')
+						VALUES (%s, %s, %s)
 						RETURNING title, content
-		""")
+		""", (new_post.title, new_post.content, new_post.owner_email))
 		returning_post = cursor.fetchall()
 		connection.commit()
 		print(f"[+] CREATED NEW POST - {new_post.title}")
@@ -95,11 +95,11 @@ def save_post_to_db(connection, cursor, new_post: Post) -> list:
 def update_post_in_db(connection, cursor, id, updated_post: Post, user: User) -> list:
 	# validation check
 	try:
-		cursor.execute(f"""
+		cursor.execute("""
 						SELECT * 
 						FROM posts
-						WHERE owner_email = '{user.email}' and id = {id}
-		""")
+						WHERE owner_email = %s and id = %s
+		""", (user.email, str(id)))
 		found_posts = cursor.fetchall()
 		if not found_posts:
 			print(f"[!] VALIDATION ERROR FROM USER {user.email} TO UPDATE POST")
@@ -110,14 +110,14 @@ def update_post_in_db(connection, cursor, id, updated_post: Post, user: User) ->
 	
 	# execution check	
 	try:
-		cursor.execute(f"""
+		cursor.execute("""
 						UPDATE posts 
-						SET title = '{updated_post.title}',
-							content = '{updated_post.content}',
+						SET title = %s,
+							content = %s,
 							date_updated = NOW()
-						WHERE id = {id}
+						WHERE id = %s
 						RETURNING title, content
-		""")
+		""", (updated_post.title, updated_post.content, str(id)))
 		returning_post = cursor.fetchall()
 		connection.commit()
 		print(f"[+] UPDATED POST FROM USER {updated_post.owner_email} - {updated_post.title}")
@@ -129,11 +129,11 @@ def update_post_in_db(connection, cursor, id, updated_post: Post, user: User) ->
 def delete_post_from_db(connection, cursor, id, user: User) -> list:
 	# validation check
 	try:
-		cursor.execute(f"""
+		cursor.execute("""
 						SELECT * 
 						FROM posts
-						WHERE owner_email = '{user.email}' and id = {id}
-		""")
+						WHERE owner_email = %s and id = %s
+		""", (user.email, str(id)))
 		found_posts = cursor.fetchall()
 		if not found_posts:
 			print(f"[!] VALIDATION ERROR FROM USER {user.email} TO DELETE POST")
@@ -144,28 +144,28 @@ def delete_post_from_db(connection, cursor, id, user: User) -> list:
 	
 	# execution check	
 	try:
-		cursor.execute(f"""
+		cursor.execute("""
 						DELETE FROM posts 
-						WHERE id = {id}
+						WHERE id = %s
 						RETURNING title, content
-		""")
+		""", (str(id), ))
 		deleted_post = cursor.fetchall()
 		connection.commit()
 		print(f"[+] DELETED POST FROM USER {user.email} - POST ID {id}")
 		return deleted_post
 	except Exception as execution_error:
-		print(f"[!] COULD NOT UPDATE POST: {execution_error}")
+		print(f"[!] COULD NOT DELETE POST: {execution_error}")
 		return [{"Message" : "Something went wrong... DB execution error"}]
 
 def check_user_credentials(connection, cursor, user_credentials: Login_user) -> list:
 	# validation check
 	try:
-		cursor.execute(f"""
+		cursor.execute("""
 						SELECT * 
 						FROM users
-						WHERE email = '{user_credentials.email}' and
-						password = '{user_credentials.password}'
-		""")
+						WHERE email = %s and
+						password = %s
+		""", (user_credentials.email, user_credentials.password))
 		found_users = cursor.fetchall()
 		if not found_users:
 			print(f"[!] VALIDATION ERROR FROM USER {user_credentials.email} TO LOGIN")
@@ -174,6 +174,7 @@ def check_user_credentials(connection, cursor, user_credentials: Login_user) -> 
 		print(f"[!] COULD NOT LOGIN USER: {execution_error}")
 		return [{"Message" : "Something went wrong... DB execution error"}]
 	
+	print(f"[+] USER {user_credentials.email} ARE NOW LOGGED IN")
 	return [{"email" : found_users[0]['email'], 
 			"name" : found_users[0]['name'],
 			"id" : found_users[0]['id'],
@@ -182,14 +183,14 @@ def check_user_credentials(connection, cursor, user_credentials: Login_user) -> 
 def save_user_like(connection, cursor, id: int, user_email: str) -> list:
 	# validation check
 	try:
-		cursor.execute(f"""
+		cursor.execute("""
 						Select x.id, post_id, liked_user_email 
 						FROM posts x 
 						JOIN likes y 
 						ON x.id = y.post_id
-						WHERE 		liked_user_email = '{user_email}' 
-									and post_id = {id}
-		""")
+						WHERE 		liked_user_email = %s 
+									and post_id = %s
+		""", (user_email, str(id)))
 		found_posts = cursor.fetchall()
 		if found_posts:
 			print(f"[!] USER {user_email} TRYING TO LIKE A POST AGAIN")
@@ -200,18 +201,18 @@ def save_user_like(connection, cursor, id: int, user_email: str) -> list:
 	
 	# execution check	
 	try:
-		cursor.execute(f"""
+		cursor.execute("""
 						UPDATE posts 
 						SET likes = likes + 1
-						WHERE id = {id}
+						WHERE id = %s
 						RETURNING id, title, content, likes
-		""")
+		""", (str(id), ))
 		returning_post = cursor.fetchall()
 		connection.commit()
-		cursor.execute(f"""
+		cursor.execute("""
 						INSERT INTO likes 
-						VALUES ('{id}', '{user_email}')
-		""")
+						VALUES (%s, %s)
+		""", (str(id), user_email))
 		connection.commit()
 		print(f"[+] POST ID {id} WAS LIKED BY USER {user_email}")
 		return returning_post
