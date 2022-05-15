@@ -7,4 +7,4 @@ class User(BaseModel):
 class Post(BaseModel):
     title: str
     content: str
-    owner_id: int
+    owner_email: str

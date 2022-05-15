@@ -79,8 +79,8 @@ def save_post_to_db(connection, cursor, new_post: Post) -> list:
 	# execution check	
 	try:
 		cursor.execute(f"""
-						INSERT INTO posts (title, content, owner_id)
-						VALUES ('{new_post.title}', '{new_post.content}', {new_post.owner_id})
+						INSERT INTO posts (title, content, owner_email)
+						VALUES ('{new_post.title}', '{new_post.content}', '{new_post.owner_email}')
 						RETURNING title, content
 		""")
 		returning_post = cursor.fetchall()
@@ -91,7 +91,22 @@ def save_post_to_db(connection, cursor, new_post: Post) -> list:
 		print(f"[!] COULD NOT CREATE NEW POST: {execution_error}")
 		return [{"Message" : "Something went wrong... DB execution error"}]
 
-def update_post_in_db(connection, cursor, updated_post: Post) -> list:
+def update_post_in_db(connection, cursor, id, updated_post: Post, user: User) -> list:
+	# validation check
+	try:
+		cursor.execute(f"""
+						SELECT * 
+						FROM posts
+						WHERE owner_email = '{user.email}' and id = {id}
+		""")
+		found_posts = cursor.fetchall()
+		if not found_posts:
+			print(f"[!] VALIDATION ERROR FROM USER {user.email} TO UPDATE POST")
+			return [{"Message" : "Validation error, this post doesn't belong to user"}]
+	except Exception as execution_error:
+		print(f"[!] COULD NOT UPDATE POST: {execution_error}")
+		return [{"Message" : "Something went wrong... DB execution error"}]
+	
 	# execution check	
 	try:
 		cursor.execute(f"""
@@ -99,13 +114,44 @@ def update_post_in_db(connection, cursor, updated_post: Post) -> list:
 						SET title = '{updated_post.title}',
 							content = '{updated_post.content}',
 							date_updated = NOW()
-						WHERE owner_id = {updated_post.owner_id}
+						WHERE id = {id}
 						RETURNING title, content
 		""")
 		returning_post = cursor.fetchall()
 		connection.commit()
-		print(f"[+] UPDATED POST ID {updated_post.owner_id}- {updated_post.title}")
+		print(f"[+] UPDATED POST FROM USER {updated_post.owner_email} - {updated_post.title}")
 		return returning_post
+	except Exception as execution_error:
+		print(f"[!] COULD NOT UPDATE POST: {execution_error}")
+		return [{"Message" : "Something went wrong... DB execution error"}]
+
+def delete_post_from_db(connection, cursor, id, user: User):
+	# validation check
+	try:
+		cursor.execute(f"""
+						SELECT * 
+						FROM posts
+						WHERE owner_email = '{user.email}' and id = {id}
+		""")
+		found_posts = cursor.fetchall()
+		if not found_posts:
+			print(f"[!] VALIDATION ERROR FROM USER {user.email} TO DELETE POST")
+			return [{"Message" : "Validation error, this post doesn't belong to user"}]
+	except Exception as execution_error:
+		print(f"[!] COULD NOT DELETE POST: {execution_error}")
+		return [{"Message" : "Something went wrong... DB execution error"}]
+	
+	# execution check	
+	try:
+		cursor.execute(f"""
+						DELETE FROM posts 
+						WHERE id = {id}
+						RETURNING title, content
+		""")
+		deleted_post = cursor.fetchall()
+		connection.commit()
+		print(f"[+] DELETED POST FROM USER {user.email} - POST ID {id}")
+		return deleted_post
 	except Exception as execution_error:
 		print(f"[!] COULD NOT UPDATE POST: {execution_error}")
 		return [{"Message" : "Something went wrong... DB execution error"}]

@@ -28,8 +28,13 @@ def create_new_post(new_post: Post):
 
 # updates post by id
 @app.patch("/posts/{id}")
-def update_post_by_id(updated_post: Post):
-	return update_post_in_db(connection, cursor, updated_post)
+def update_post_by_id(id: int, updated_post: Post, user: User):
+	return update_post_in_db(connection, cursor, id, updated_post, user)
+
+#deletes post by id
+@app.delete("/posts/{id}")
+def delete_post_by_id(id: int, user: User):
+	return delete_post_from_db(connection, cursor, id, user)
 
 # registers new user
 @app.post("/register")
