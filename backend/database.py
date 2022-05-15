@@ -126,7 +126,7 @@ def update_post_in_db(connection, cursor, id, updated_post: Post, user: User) ->
 		print(f"[!] COULD NOT UPDATE POST: {execution_error}")
 		return [{"Message" : "Something went wrong... DB execution error"}]
 
-def delete_post_from_db(connection, cursor, id, user: User):
+def delete_post_from_db(connection, cursor, id, user: User) -> list:
 	# validation check
 	try:
 		cursor.execute(f"""
@@ -157,7 +157,7 @@ def delete_post_from_db(connection, cursor, id, user: User):
 		print(f"[!] COULD NOT UPDATE POST: {execution_error}")
 		return [{"Message" : "Something went wrong... DB execution error"}]
 
-def check_user_credentials(connection, cursor, user_credentials: Login_user):
+def check_user_credentials(connection, cursor, user_credentials: Login_user) -> list:
 	# validation check
 	try:
 		cursor.execute(f"""
@@ -178,3 +178,43 @@ def check_user_credentials(connection, cursor, user_credentials: Login_user):
 			"name" : found_users[0]['name'],
 			"id" : found_users[0]['id'],
 			"registration_date" : found_users[0]['data_registred']}]
+
+def save_user_like(connection, cursor, id: int, user_email: str) -> list:
+	# validation check
+	try:
+		cursor.execute(f"""
+						Select x.id, post_id, liked_user_email 
+						FROM posts x 
+						JOIN likes y 
+						ON x.id = y.post_id
+						WHERE 		liked_user_email = '{user_email}' 
+									and post_id = {id}
+		""")
+		found_posts = cursor.fetchall()
+		if found_posts:
+			print(f"[!] USER {user_email} TRYING TO LIKE A POST AGAIN")
+			return [{"Message" : "You have already liked this post"}]
+	except Exception as execution_error:
+		print(f"[!] COULD NOT LIKE POST: {execution_error}")
+		return [{"Message" : "Something went wrong... DB execution error"}]
+	
+	# execution check	
+	try:
+		cursor.execute(f"""
+						UPDATE posts 
+						SET likes = likes + 1
+						WHERE id = {id}
+						RETURNING id, title, content, likes
+		""")
+		returning_post = cursor.fetchall()
+		connection.commit()
+		cursor.execute(f"""
+						INSERT INTO likes 
+						VALUES ('{id}', '{user_email}')
+		""")
+		connection.commit()
+		print(f"[+] POST ID {id} WAS LIKED BY USER {user_email}")
+		return returning_post
+	except Exception as execution_error:
+		print(f"[!] COULD NOT UPDATE POST: {execution_error}")
+		return [{"Message" : "Something went wrong... DB execution error"}]

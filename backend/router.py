@@ -9,7 +9,7 @@ connection, cursor = postgre_database_connection()
 
 @app.get("/")
 def send_index_page():
-	return {"Message" : "Front page"}
+	return {"Message" : "go to /docs to see api functionality"}
 
 # sends all posts
 @app.get("/posts")
@@ -30,6 +30,11 @@ def create_new_post(new_post: Post):
 @app.patch("/posts/{id}")
 def update_post_by_id(id: int, updated_post: Post, user: User):
 	return update_post_in_db(connection, cursor, id, updated_post, user)
+
+# likes a post
+@app.patch("/posts/like/{id}")
+def like_post_by_id(id: int, user_email: str):
+	return save_user_like(connection, cursor, id, user_email)
 
 #deletes post by id
 @app.delete("/posts/{id}")
