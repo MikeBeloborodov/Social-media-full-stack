@@ -6,7 +6,7 @@ from fastapi import status, HTTPException
 from passlib.context import CryptContext
 
 
-def postgre_database_connection() -> list:
+def postgres_database_connection() -> list:
     while True:
         try:
             connection = psycopg2.connect(
@@ -84,6 +84,20 @@ def save_user_to_db(connection, cursor, new_user: CreateUser) -> list:
         print(f"Error: {hash_error}")
         raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Couldn't create user, internal error")
 
+    # check if user already exists
+    try:
+        cursor.execute("""
+                    SELECT * FROM users
+                    WHERE email = %s""", (new_user.email, ))
+        accounts_found = cursor.fetchall()
+    except Exception as user_validation_error:
+        print(f"[!] ERROR DURING USER SEARCH IN DB - {new_user.email}")
+        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Database internal error during user search")
+
+    if accounts_found:
+        print(f"[!] ERROR, USER {new_user.email} ALREADY EXISTS!")
+        raise  HTTPException(status.HTTP_409_CONFLICT, detail="Error. This user already exists.")
+
     # execution check
     try:
         cursor.execute("""
@@ -118,6 +132,19 @@ def save_post_to_db(connection, cursor, new_post: Post) -> list:
 
 
 def update_post_in_db(connection, cursor, id, updated_post: Post, user: User) -> list:
+    # check if post exists
+    try:
+        cursor.execute("""SELECT * FROM posts WHERE id = %s""", (str(id),))
+        found_posts = cursor.fetchall()
+    except Exception as execution_error:
+        print(f"[!] COULD NOT FIND POST TO LIKE: {execution_error}")
+        connection.rollback()
+        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Couldn't find post to update in DB")
+
+    if not found_posts:
+        print(f"[!] USER {user.email} TRYING TO UPDATE A NON EXISTING POST")
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="This post doesn't exist")
+
     # validation check
     try:
         cursor.execute("""
@@ -155,6 +182,19 @@ def update_post_in_db(connection, cursor, id, updated_post: Post, user: User) ->
 
 
 def delete_post_from_db(connection, cursor, id, user: User) -> list:
+    # check if post exists
+    try:
+        cursor.execute("""SELECT * FROM posts WHERE id = %s""", (str(id),))
+        found_posts = cursor.fetchall()
+    except Exception as execution_error:
+        print(f"[!] COULD NOT FIND POST TO LIKE: {execution_error}")
+        connection.rollback()
+        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Couldn't find post to delete in DB")
+
+    if not found_posts:
+        print(f"[!] USER {user.email} TRYING TO DELETE A NON EXISTING POST")
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="This post doesn't exist")
+
     # validation check
     try:
         cursor.execute("""
@@ -210,7 +250,7 @@ def check_user_credentials(connection, cursor, user_credentials: Login_user) -> 
     return [{"email": found_users[0]['email'],
              "name": found_users[0]['name'],
              "id": found_users[0]['id'],
-             "registration_date": found_users[0]['data_registered']}]
+             "registration_date": found_users[0]['data_registred']}]
 
 
 def save_user_like(connection, cursor, id: int, user_email: str) -> list:

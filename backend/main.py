@@ -1,18 +1,15 @@
 from fastapi import FastAPI
-from database import *
 import posts
 import users
 
+# app entry point
 app = FastAPI()
 
 
+# main page
 @app.get("/")
 def send_index_page():
     return {"Message": "go to /docs to see api functionality"}
-
-
-# db connection
-connection, cursor = postgre_database_connection()
 
 
 # router for posts
