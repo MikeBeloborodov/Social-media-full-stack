@@ -37,3 +37,8 @@ uvicorn==0.17.6
 uvloop==0.16.0
 watchgod==0.8.2
 websockets==10.3
+rsa==4.8
+python-jose==3.3.0
+pyasn1==0.4.8
+ecdsa==0.17.0
+colorama==0.4.4

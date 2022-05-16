@@ -4,7 +4,8 @@ from models import *
 import time
 from fastapi import status, HTTPException
 from passlib.context import CryptContext
-from settings import *
+from settings import settings
+import oauth2
 
 
 def postgres_database_connection() -> list:
@@ -211,7 +212,7 @@ def save_user_to_db(connection, cursor, new_user: CreateUser) -> list:
 
     if accounts_found:
         print(f"[!] ERROR, USER {new_user.email} ALREADY EXISTS!")
-        raise HTTPException(status.HTTP_409_CONFLICT, detail="Error. This user already exists.")
+        raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Error. This user already exists.")
 
     # execution check
     try:
@@ -229,34 +230,33 @@ def save_user_to_db(connection, cursor, new_user: CreateUser) -> list:
         raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Couldn't write user to DB")
 
 
-def check_user_credentials(connection, cursor, user_credentials: LoginUser) -> list:
+def check_user_credentials(connection, cursor, user_credentials: LoginUser) -> dict:
     # try accessing DB
     try:
-        cursor.execute("""SELECT * FROM users WHERE email = %s""", (user_credentials.email, ))
+        cursor.execute("""SELECT * FROM users WHERE email = %s""", (user_credentials.username, ))
         found_user = cursor.fetchone()
     except Exception as hash_error:
-        print(f"[!] UNABLE TO RETRIEVE USER DURING LOGIN - {user_credentials.email}")
+        print(f"[!] UNABLE TO RETRIEVE USER DURING LOGIN - {user_credentials.username}")
         print(f"Error: {hash_error}")
         connection.rollback()
         raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Couldn't login user, internal error")
 
     # first we check if user email exists
     if not found_user:
-        print(f"[!] VALIDATION ERROR FROM USER {user_credentials.email} TO LOGIN, EMAIL IS WRONG")
+        print(f"[!] VALIDATION ERROR FROM USER {user_credentials.username} TO LOGIN, EMAIL IS WRONG")
         raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Wrong credentials")
 
     # then we check if stored hashed password and given password are the same
-    hashed_password_in_db = found_user['password']
     pwd_context = CryptContext(schemes=['bcrypt'])
-    if not pwd_context.verify(user_credentials.password, hashed_password_in_db):
-        print(f"[!] USER {user_credentials.email} TRYING TO LOGIN WITH A WRONG PASSWORD")
+    if not pwd_context.verify(user_credentials.password, found_user['password']):
+        print(f"[!] USER {user_credentials.username} TRYING TO LOGIN WITH A WRONG PASSWORD")
         raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Wrong credentials")
 
     # if everything is okay we send data back
-    print(f"[+] USER {user_credentials.email} IS NOW LOGGED IN")
-    return [{"email": found_user['email'],
-             "id": found_user['id'],
-             "registration_date": found_user['created_at']}]
+    print(f"[+] USER {user_credentials.username} IS NOW LOGGED IN")
+    access_token = oauth2.create_access_token(data = {"user_id" : found_user['id']})
+
+    return {"access_token": access_token, "token_type": "bearer"}
 
 
 def save_user_like(connection, cursor, id: int, user_email: str) -> list:
@@ -293,7 +293,7 @@ def save_user_like(connection, cursor, id: int, user_email: str) -> list:
     # check if already liked
     if found_post:
         print(f"[!] USER {user_email} TRYING TO LIKE A POST AGAIN")
-        raise HTTPException(status.HTTP_409_CONFLICT, detail="User already liked this post")
+        raise HTTPException(status.HTTP_403_FORBIDDEN, detail="User already liked this post")
 
     # execution check
     try:

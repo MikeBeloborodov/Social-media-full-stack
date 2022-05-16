@@ -2,6 +2,7 @@ from fastapi import FastAPI
 import posts
 import users
 
+
 # app entry point
 app = FastAPI()
 
