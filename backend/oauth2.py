@@ -1,3 +1,4 @@
+from locale import strcoll
 from jose import JWTError, jwt
 from datetime import datetime, timedelta
 from settings import settings
@@ -14,20 +15,23 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl='login')
 SECRET_KEY = settings.secret_key
 ALGORITHM = settings.algorithm
 ACCESS_TOKEN_EXPIRE_MINUTES = int(settings.access_token_expire_minutes)
+now = datetime.now()
+time_string = now.strftime("%H:%M:%S %Y-%m-%d")
 
 
 def create_access_token(data: dict) -> str:
     try:
         to_encode = data.copy()
         expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-        to_encode.update({"expiration": str(expire)})
+        to_encode.update({"exp": expire})
+        print(to_encode)
 
         # payload, secret key, algorithm
         encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
         return encoded_jwt
     except JWTError as error:
-        print(f"[!!] CREATE ACCESS TOKEN ERROR: {error}")
+        print(f"[{time_string}][!!] CREATE ACCESS TOKEN ERROR: {error}")
         raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Token creation error")
 
 
@@ -42,7 +46,7 @@ def verify_access_token(token: str, credentials_exception):
         # validate id with pydantic
         token_data = TokenData(id=user_id)  
     except JWTError as error:
-        print(f"[!!] VERIFY ACCESS TOKEN ERROR: {error}")
+        print(f"[{time_string}][!!] VERIFY ACCESS TOKEN ERROR: {error}")
         raise credentials_exception
 
     return token_data
