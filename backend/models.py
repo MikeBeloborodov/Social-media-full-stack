@@ -20,3 +20,12 @@ class LoginUser(BaseModel):
 class CreateUser(BaseModel):
     email: EmailStr
     password: str
+
+
+class UpdateUser(BaseModel):
+    email: EmailStr
+
+
+class UpdatedPost(BaseModel):
+    title: str
+    content: str

@@ -4,15 +4,17 @@ from models import *
 import time
 from fastapi import status, HTTPException
 from passlib.context import CryptContext
+from settings import *
 
 
 def postgres_database_connection() -> list:
     while True:
         try:
             connection = psycopg2.connect(
-                host='localhost',
-                database='social-media-app-api',
-                user='postgres',
+                host=settings.database_hostname,
+                database=settings.database_name,
+                password=settings.database_password,
+                user=settings.database_username,
                 cursor_factory=RealDictCursor
             )
             cursor = connection.cursor()
@@ -79,7 +81,7 @@ def save_post_to_db(connection, cursor, new_post: Post) -> list:
         cursor.execute("""
                     INSERT INTO posts (title, content, owner_email)
                     VALUES (%s, %s, %s)
-                    RETURNING id, title, content, owner_email, created_at, updated_at""", (new_post.title, new_post.content, new_post.owner_email))
+                    RETURNING id, title, content, owner_email, created_at, updated_at, likes""", (new_post.title, new_post.content, new_post.owner_email))
         returning_post = cursor.fetchone()
         connection.commit()
         print(f"[+] CREATED NEW POST - {new_post.title}")
@@ -132,7 +134,7 @@ def save_updated_post_by_id(connection, cursor, id, updated_post: Post, user: Us
                     RETURNING id, title, content, owner_email, created_at, updated_at, likes""", (updated_post.title, updated_post.content, str(id)))
         returning_post = cursor.fetchone()
         connection.commit()
-        print(f"[+] UPDATED POST FROM USER {updated_post.owner_email} - {updated_post.title}")
+        print(f"[+] UPDATED POST FROM USER {user.email} - {updated_post.title}")
         return returning_post
     except Exception as execution_error:
         print(f"[!] COULD NOT UPDATE POST: {execution_error}")
@@ -253,7 +255,6 @@ def check_user_credentials(connection, cursor, user_credentials: LoginUser) -> l
     # if everything is okay we send data back
     print(f"[+] USER {user_credentials.email} IS NOW LOGGED IN")
     return [{"email": found_user['email'],
-             "name": found_user['name'],
              "id": found_user['id'],
              "registration_date": found_user['created_at']}]
 
@@ -304,7 +305,7 @@ def save_user_like(connection, cursor, id: int, user_email: str) -> list:
         returning_post = cursor.fetchone()
         connection.commit()
         cursor.execute("""
-                    INSERT INTO likes 
+                    INSERT INTO likes (post_id, liked_user_email)
                     VALUES (%s, %s)""", (str(id), user_email))
         connection.commit()
         print(f"[+] POST ID {id} WAS LIKED BY USER {user_email}")

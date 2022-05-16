@@ -33,7 +33,7 @@ def create_new_post(new_post: models.Post):
 
 # updates post by id
 @router.patch("/{id}", status_code=status.HTTP_201_CREATED)
-def update_post_by_id(id: int, updated_post: models.Post, user: models.User):
+def update_post_by_id(id: int, updated_post: models.UpdatedPost, user: models.UpdateUser):
     return save_updated_post_by_id(connection, cursor, id, updated_post, user)
 
 
