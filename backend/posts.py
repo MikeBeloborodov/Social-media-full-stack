@@ -34,11 +34,11 @@ def create_new_post(new_post: models.Post):
 # updates post by id
 @router.patch("/{id}", status_code=status.HTTP_201_CREATED)
 def update_post_by_id(id: int, updated_post: models.Post, user: models.User):
-    return update_post_in_db(connection, cursor, id, updated_post, user)
+    return save_updated_post_by_id(connection, cursor, id, updated_post, user)
 
 
 # likes a post
-@router.patch("/{id}", status_code=status.HTTP_201_CREATED)
+@router.patch("/like/{id}", status_code=status.HTTP_201_CREATED)
 def like_post_by_id(id: int, user_email: str):
     return save_user_like(connection, cursor, id, user_email)
 

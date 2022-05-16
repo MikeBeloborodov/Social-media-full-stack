@@ -18,5 +18,5 @@ def create_new_user(new_user: CreateUser):
 
 # login a user
 @router.post("/login/", status_code=status.HTTP_200_OK)
-def login_user(user_credentials: Login_user):
+def login_user(user_credentials: LoginUser):
     return check_user_credentials(connection, cursor, user_credentials)

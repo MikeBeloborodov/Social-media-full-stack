@@ -1,20 +1,22 @@
 from pydantic import BaseModel, EmailStr
 
+
 class User(BaseModel):
-    name: str
-    email:str
+    email: EmailStr
     password: str
+
 
 class Post(BaseModel):
     title: str
     content: str
-    owner_email: str
+    owner_email: EmailStr
 
-class Login_user(BaseModel):
-    email: str
+
+class LoginUser(BaseModel):
+    email: EmailStr
     password: str
 
+
 class CreateUser(BaseModel):
-    name: str
     email: EmailStr
     password: str
