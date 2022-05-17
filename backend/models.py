@@ -1,5 +1,5 @@
 from database import Base
-from sqlalchemy import Column, Integer, String
+from sqlalchemy import Column, ForeignKey, Integer, String
 from sqlalchemy.sql.sqltypes import TIMESTAMP
 from sqlalchemy.sql.expression import text
 
@@ -13,7 +13,7 @@ class Post(Base):
     created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=text('now()'))
     updated_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=text('now()'))
     likes = Column(Integer, nullable=False, server_default=text('0'))
-
+    owner_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
 
 class User(Base):
     __tablename__ = "users"
@@ -28,5 +28,5 @@ class Like(Base):
     __tablename__ = "likes"
 
     id = Column(Integer, primary_key=True, nullable=False)
-    post_id = Column(Integer, nullable=False)
-    user_id = Column(Integer, nullable=False)
+    post_id = Column(Integer, ForeignKey("posts.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)

@@ -6,6 +6,7 @@ from datetime import datetime
 
 class Post(BaseModel):
     id: int
+    owner_id: int
     title: str
     content: str
     created_at: datetime
@@ -22,6 +23,7 @@ class NewPost(BaseModel):
 
 class ResponseNewPost(BaseModel):
     id: int
+    owner_id: int
     title: str
     content: str
     created_at: datetime
@@ -39,6 +41,7 @@ class UpdatedPost(BaseModel):
 
 class ResponseUpdatedPost(BaseModel):
     id: int
+    owner_id: int
     title: str
     content: str
     created_at: datetime
@@ -47,11 +50,6 @@ class ResponseUpdatedPost(BaseModel):
 
     class Config:
         orm_mode = True
-
-
-class LoginUser(BaseModel):
-    email: EmailStr
-    password: str
 
 
 class CreateUser(BaseModel):
@@ -66,6 +64,12 @@ class ResponseCreateUser(BaseModel):
 
     class Config:
         orm_mode = True
+
+
+class LoginUser(BaseModel):
+    email: EmailStr
+    password: str
+
 
 class Token(BaseModel):
     access_token: str

@@ -1,7 +1,6 @@
 from fastapi import APIRouter, Depends, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
-import database as db
 import schemas
 import database
 import functions
@@ -10,10 +9,6 @@ import functions
 router = APIRouter(
     tags=["User interaction"]
 )
-
-
-# db connection
-connection, cursor = db.postgres_database_connection()
 
 
 # registers new user

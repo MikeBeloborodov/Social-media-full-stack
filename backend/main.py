@@ -1,12 +1,12 @@
 from fastapi import FastAPI 
 import posts
 import users
-from orm_database import engine
-import orm_models
+from database import engine
+import models
 
 
 # sqalchemy creates tables
-orm_models.Base.metadata.create_all(bind=engine)
+models.Base.metadata.create_all(bind=engine)
 
 
 # app entry point

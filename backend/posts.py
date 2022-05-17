@@ -3,7 +3,6 @@ from sqlalchemy.orm import Session
 import schemas
 import database
 import oauth2
-import database
 import functions
 from typing import List
 
@@ -12,10 +11,6 @@ router = APIRouter(
     prefix="/posts",
     tags=['Posts']
 )
-
-
-# db connection
-connection, cursor = database.postgres_database_connection()
 
 
 # sends all posts

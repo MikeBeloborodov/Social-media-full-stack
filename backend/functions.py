@@ -1,4 +1,6 @@
+from audioop import add
 import copy
+from msilib import schema
 import models
 from sqlalchemy.orm import Session
 from schemas import *
@@ -52,7 +54,7 @@ def save_new_post_to_db(new_post: NewPost, db: Session, user_id: int) -> dict:
     # execution check
     try:
         # ** will unpack this dict in key=value format
-        post_to_save = models.Post(**new_post.dict())
+        post_to_save = models.Post(**new_post.dict(), owner_id=user_id)
         db.add(post_to_save)
         db.commit()
         db.refresh(post_to_save)
@@ -80,6 +82,11 @@ def save_updated_post_by_id(id: int, updated_post: UpdatedPost, db: Session, use
         print(f"[{time_stamp()}][!] FAILED TO UPDATE POST BY ID {id} FROM DB - NOT FOUND")
         raise HTTPException(status.HTTP_404_NOT_FOUND, 
                                     detail="This post does not exist")
+
+    # access check
+    if post.owner_id != user_id:
+        print(f"[{time_stamp()}][!] VALIDATION ERROR FROM USER ID {user_id} TO UPDATE POST")
+        raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Wrong credentials")
 
     # execute update
     try:
@@ -112,6 +119,19 @@ def save_post_like_to_db(id: int, db: Session, user_id: int) -> dict:
         raise HTTPException(status.HTTP_404_NOT_FOUND, 
                                     detail="This post does not exist")
     
+    # double like check
+    try:
+        already_liked = db.query(models.Like).filter(models.Like.post_id == post.id and 
+                                                        models.Like.user_id == user_id).first()
+    except Exception as execution_error:
+        print(f"[{time_stamp()}][!] ERROR DURING ACCESSING LIKE TABLE: {execution_error}")
+        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, 
+                                    detail="Database error")
+    
+    if already_liked:
+        print(f"[{time_stamp()}][!] USER ID {user_id} TRYING TO LIKE A POST AGAIN")
+        raise HTTPException(status.HTTP_403_FORBIDDEN, detail="User already liked this post")
+
     # execute update
     try:
         post_query.update({"likes": models.Post.likes + 1}, synchronize_session=False)
@@ -122,6 +142,15 @@ def save_post_like_to_db(id: int, db: Session, user_id: int) -> dict:
         raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, 
                                     detail="Could not update post in DB")
     
+    # save like to the table
+    try:
+        db.add(models.Like(post_id=post.id, user_id=user_id))
+        db.commit()
+    except Exception as execution_error:
+        print(f"[{time_stamp()}][!] COULD NOT ADD LIKE TO A TABLE: {execution_error}")
+        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, 
+                                    detail="Could not add like in DB")
+
     # if ok return liked post
     return post
 
@@ -142,6 +171,11 @@ def delete_post_from_db(id: int, db: Session, user_id: int) -> dict:
         raise HTTPException(status.HTTP_404_NOT_FOUND, 
                                     detail="This post does not exist")
     
+    # access check
+    if post.owner_id != user_id:
+        print(f"[{time_stamp()}][!] VALIDATION ERROR FROM USER ID {user_id} TO DELETE POST")
+        raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Wrong credentials")
+
     # execute delete post
     try:
         post_query.delete(synchronize_session=False)
