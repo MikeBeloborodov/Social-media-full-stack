@@ -9,6 +9,7 @@ import oauth2
 from utils import time_stamp
 
 
+
 def postgres_database_connection() -> list:
     while True:
         try:
