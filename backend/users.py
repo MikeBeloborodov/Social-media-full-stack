@@ -14,7 +14,7 @@ connection, cursor = db.postgres_database_connection()
 
 # registers new user
 @router.post("/register/", status_code=status.HTTP_201_CREATED)
-def create_new_user(new_user: db.CreateUser):
+def create_new_user(new_user: CreateUser):
     return db.save_user_to_db(connection, cursor, new_user)
 
 

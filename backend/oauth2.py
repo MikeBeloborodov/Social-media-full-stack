@@ -1,4 +1,3 @@
-from locale import strcoll
 from jose import JWTError, jwt
 from datetime import datetime, timedelta
 from settings import settings
@@ -24,7 +23,6 @@ def create_access_token(data: dict) -> str:
         to_encode = data.copy()
         expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
         to_encode.update({"exp": expire})
-        print(to_encode)
 
         # payload, secret key, algorithm
         encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
@@ -49,7 +47,7 @@ def verify_access_token(token: str, credentials_exception):
         print(f"[{time_string}][!!] VERIFY ACCESS TOKEN ERROR: {error}")
         raise credentials_exception
 
-    return token_data
+    return user_id
 
 
 def get_current_user(token: str = Depends(oauth2_scheme)):

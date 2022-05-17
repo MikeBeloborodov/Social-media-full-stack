@@ -32,7 +32,7 @@ def postgres_database_connection() -> list:
             time.sleep(5)
 
 
-def return_all_posts(connection, cursor) -> list:
+def return_all_posts(connection, cursor, user_id) -> list:
     # execution check
     try:
         cursor.execute("""
@@ -49,7 +49,7 @@ def return_all_posts(connection, cursor) -> list:
     except Exception as execution_error:
         print(f"[{time_string}][!] COULD NOT RETRIEVE DATA FROM DB: {execution_error}")
         connection.rollback()
-        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Couldn't retrieve data from DB")
+        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Could not retrieve data from DB")
 
     # check if posts exist
     if not posts:
@@ -60,7 +60,7 @@ def return_all_posts(connection, cursor) -> list:
         return posts
 
 
-def return_post_by_id(connection, cursor, id) -> list:
+def return_post_by_id(connection, cursor, id, user_id) -> list:
     # execution check
     try:
         cursor.execute("""
@@ -71,23 +71,37 @@ def return_post_by_id(connection, cursor, id) -> list:
     except Exception as execution_error:
         print(f"[{time_string}][!] COULD NOT RETRIEVE DATA FROM DB: {execution_error}")
         connection.rollback()
-        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Couldn't retrieve data from DB")
+        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Could not retrieve data from DB")
 
     # check if post exists, else return it
     if not post:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="This post doesn't exist")
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="This post does not exist")
     else:
         print(f"[{time_string}][+] SENDING POST WITH ID {id}")
         return post
 
 
-def save_post_to_db(connection, cursor, new_post: Post) -> list:
+def save_post_to_db(connection, cursor, new_post: NewPost, user_id) -> list:
+    # get posting user from db
+    try:
+        cursor.execute("""
+                    SELECT * FROM users WHERE id = %s""", (user_id, ))
+        posting_user = cursor.fetchone()
+    except Exception as execution_error:
+        print(f"[{time_string}][!] COULD NOT CREATE NEW POST (FAILED TO RETRIEVE USER FROM DB): {execution_error}")
+        connection.rollback()
+        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Could not write post to DB, user id retreival error.")
+
+    if not posting_user:
+            print(f"[{time_string}][!] TRIED TO CREATE A NEW POST, BUT POSTING USER WAS NOT FOUND, ID = {user_id}")
+            raise HTTPException(status.HTTP_403_FORBIDDEN, detail="User with this id does not exist")
+
     # execution check
     try:
         cursor.execute("""
                     INSERT INTO posts (title, content, owner_email)
                     VALUES (%s, %s, %s)
-                    RETURNING id, title, content, owner_email, created_at, updated_at, likes""", (new_post.title, new_post.content, new_post.owner_email))
+                    RETURNING id, title, content, owner_email, created_at, updated_at, likes""", (new_post.title, new_post.content, posting_user['email']))
         returning_post = cursor.fetchone()
         connection.commit()
         print(f"[{time_string}][+] CREATED NEW POST - {new_post.title}")
@@ -95,39 +109,45 @@ def save_post_to_db(connection, cursor, new_post: Post) -> list:
     except Exception as execution_error:
         print(f"[{time_string}][!] COULD NOT CREATE NEW POST: {execution_error}")
         connection.rollback()
-        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Couldn't write post to DB")
+        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Could not write post to DB")
 
 
-def save_updated_post_by_id(connection, cursor, id, updated_post: Post, user: User) -> list:
+def save_updated_post_by_id(connection, cursor, id, updated_post: UpdatedPost, user_id) -> list:
     # check if post exists
     try:
         cursor.execute("""SELECT * FROM posts WHERE id = %s""", (str(id),))
         found_post = cursor.fetchone()
     except Exception as execution_error:
-        print(f"[{time_string}][!] COULD NOT FIND POST TO LIKE: {execution_error}")
+        print(f"[{time_string}][!] COULD NOT EXTRACT POST TO UPDATE, DB ERROR: {execution_error}")
         connection.rollback()
-        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Couldn't find post to update in DB")
+        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Could not find post to update in DB")
 
     if not found_post:
-        print(f"[{time_string}][!] USER {user.email} TRYING TO UPDATE A NON EXISTING POST")
-        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="This post doesn't exist")
+        print(f"[{time_string}][!] USER ID = {user_id} TRYING TO UPDATE A NON EXISTING POST")
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="This post does not exist")
+
+    # get updating user from db
+    try:
+        cursor.execute("""
+                    SELECT * FROM users WHERE id = %s""", (user_id, ))
+        updating_user = cursor.fetchone()
+    except Exception as execution_error:
+        print(f"[{time_string}][!] COULD NOT UPDATE POST (FAILED TO RETRIEVE USER FROM DB): {execution_error}")
+        connection.rollback()
+        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Could not update post in DB, user id retreival error.")
+
+    if not updating_user:
+            print(f"[{time_string}][!] TRIED TO UPDATE POST, BUT UPDATING USER WAS NOT FOUND, ID = {user_id}")
+            raise HTTPException(status.HTTP_403_FORBIDDEN, detail="User with this id does not exist")
 
     # validation check
     try:
-        cursor.execute("""
-                    SELECT * 
-                    FROM posts
-                    WHERE owner_email = %s and id = %s""", (user.email, str(id)))
-        found_post = cursor.fetchone()
-    except Exception as execution_error:
-        print(f"[{time_string}][!] COULD NOT UPDATE POST: {execution_error}")
-        connection.rollback()
-        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Couldn't retrieve post data from DB")
-
-    # send 403 if validation fails
-    if not found_post:
-        print(f"[{time_string}][!] VALIDATION ERROR FROM USER {user.email} TO UPDATE POST")
-        raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Wrong credentials")
+        if found_post['owner_email'] != updating_user['email']:
+            print(f"[{time_string}][!] VALIDATION ERROR FROM USER ID {user_id} TO UPDATE POST")
+            raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Wrong credentials")
+    except Exception as evaluation_error:
+        print(f"[{time_string}][!] COULD NOT UPDATE POST: {evaluation_error}")
+        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Could not compare user email with post owner")
 
     # execution check
     try:
@@ -140,15 +160,15 @@ def save_updated_post_by_id(connection, cursor, id, updated_post: Post, user: Us
                     RETURNING id, title, content, owner_email, created_at, updated_at, likes""", (updated_post.title, updated_post.content, str(id)))
         returning_post = cursor.fetchone()
         connection.commit()
-        print(f"[{time_string}][+] UPDATED POST FROM USER {user.email} - {updated_post.title}")
+        print(f"[{time_string}][+] UPDATED POST FROM USER ID {user_id} - {updated_post.title}")
         return returning_post
     except Exception as execution_error:
         print(f"[{time_string}][!] COULD NOT UPDATE POST: {execution_error}")
         connection.rollback()
-        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Couldn't update post in DB")
+        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Could not update post in DB")
 
 
-def delete_post_from_db(connection, cursor, id, user: User) -> list:
+def delete_post_from_db(connection, cursor, id, user_id) -> list:
     # check if post exists
     try:
         cursor.execute("""SELECT * FROM posts WHERE id = %s""", (str(id),))
@@ -156,27 +176,34 @@ def delete_post_from_db(connection, cursor, id, user: User) -> list:
     except Exception as execution_error:
         print(f"[{time_string}][!] COULD NOT FIND POST TO LIKE: {execution_error}")
         connection.rollback()
-        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Couldn't find post to delete in DB")
+        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Could not find post to delete in DB")
 
     if not found_post:
-        print(f"[{time_string}][!] USER {user.email} TRYING TO DELETE A NON EXISTING POST")
-        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="This post doesn't exist")
+        print(f"[{time_string}][!] USER ID {user_id} TRYING TO DELETE A NON EXISTING POST")
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="This post does not exist")
+
+    # get deleting user from db
+    try:
+        cursor.execute("""
+                    SELECT * FROM users WHERE id = %s""", (user_id, ))
+        deleting_user = cursor.fetchone()
+    except Exception as execution_error:
+        print(f"[{time_string}][!] COULD NOT DELETE POST (FAILED TO RETRIEVE USER FROM DB): {execution_error}")
+        connection.rollback()
+        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Could not delete post in DB, user id retreival error.")
+
+    if not deleting_user:
+            print(f"[{time_string}][!] TRIED TO DELETE POST, BUT USER WAS NOT FOUND, ID = {user_id}")
+            raise HTTPException(status.HTTP_403_FORBIDDEN, detail="User with this id does not exist")
 
     # validation check
     try:
-        cursor.execute("""
-                    SELECT * 
-                    FROM posts
-                    WHERE owner_email = %s and id = %s""", (user.email, str(id)))
-        found_post = cursor.fetchone()
-    except Exception as execution_error:
-        print(f"[{time_string}][!] COULD NOT DELETE POST: {execution_error}")
-        connection.rollback()
-        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Couldn't retrieve post to delete from DB")
-
-    if not found_post:
-        print(f"[{time_string}][!] VALIDATION ERROR FROM USER {user.email} TO DELETE POST")
-        raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Wrong credentials")
+        if found_post['owner_email'] != deleting_user['email']:
+            print(f"[{time_string}][!] VALIDATION ERROR FROM USER ID {user_id} TO UPDATE POST")
+            raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Wrong credentials")
+    except Exception as evaluation_error:
+        print(f"[{time_string}][!] COULD NOT UPDATE POST: {evaluation_error}")
+        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Could not compare user email with post owner")
 
     # execution check
     try:
@@ -186,12 +213,82 @@ def delete_post_from_db(connection, cursor, id, user: User) -> list:
                     RETURNING id, title, content, owner_email, created_at, updated_at, likes""", (str(id),))
         deleted_post = cursor.fetchone()
         connection.commit()
-        print(f"[{time_string}][+] DELETED POST FROM USER {user.email} - POST ID {id}")
+        print(f"[{time_string}][+] DELETED POST FROM USER ID {user_id} - POST ID {id}")
         return deleted_post
     except Exception as execution_error:
         print(f"[{time_string}][!] COULD NOT DELETE POST: {execution_error}")
         connection.rollback()
-        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Couldn't delete post from DB")
+        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Could not delete post from DB")
+
+
+def save_post_like_to_db(connection, cursor, id: int, user_id) -> list:
+    # check if post exists
+    try:
+        cursor.execute("""
+                    SELECT * FROM posts WHERE id = %s""", (str(id),))
+        found_post = cursor.fetchone()
+    except Exception as execution_error:
+        print(f"[{time_string}][!] COULD NOT FIND POST TO LIKE: {execution_error}")
+        connection.rollback()
+        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Could not find post to like in DB")
+
+    if not found_post:
+        print(f"[{time_string}][!] USER ID {user_id} TRYING TO LIKE A NON EXISTING POST")
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="This post does not exist")
+
+    # get liking user from db
+    try:
+        cursor.execute("""
+                    SELECT * FROM users WHERE id = %s""", (user_id, ))
+        liking_user = cursor.fetchone()
+    except Exception as execution_error:
+        print(f"[{time_string}][!] COULD NOT DELETE POST (FAILED TO RETRIEVE USER FROM DB): {execution_error}")
+        connection.rollback()
+        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Could not delete post in DB, user id retreival error.")
+
+    if not liking_user:
+            print(f"[{time_string}][!] TRIED TO DELETE POST, BUT USER WAS NOT FOUND, ID = {user_id}")
+            raise HTTPException(status.HTTP_403_FORBIDDEN, detail="User with this id does not exist")
+
+    # validation check
+    try:
+        cursor.execute("""
+                    Select x.id, post_id, liked_user_email 
+                    FROM posts x 
+                    JOIN likes y 
+                    ON x.id = y.post_id
+                    WHERE 		liked_user_email = %s 
+                                and post_id = %s""", (liking_user['email'], str(id)))
+        found_post = cursor.fetchone()
+    except Exception as execution_error:
+        print(f"[{time_string}][!] COULD NOT LIKE POST: {execution_error}")
+        connection.rollback()
+        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Could not find post in DB")
+
+    # check if already liked
+    if found_post:
+        print(f"[{time_string}][!] USER ID {user_id} TRYING TO LIKE A POST AGAIN")
+        raise HTTPException(status.HTTP_403_FORBIDDEN, detail="User already liked this post")
+
+    # execution check
+    try:
+        cursor.execute("""
+                    UPDATE posts 
+                    SET likes = likes + 1
+                    WHERE id = %s
+                    RETURNING id, title, content, owner_email, created_at, updated_at, likes""", (str(id),))
+        returning_post = cursor.fetchone()
+        connection.commit()
+        cursor.execute("""
+                    INSERT INTO likes (post_id, liked_user_email)
+                    VALUES (%s, %s)""", (str(id), liking_user['email']))
+        connection.commit()
+        print(f"[{time_string}][+] POST ID {id} WAS LIKED BY USER ID {user_id}")
+        return returning_post
+    except Exception as execution_error:
+        print(f"[{time_string}][!] COULD NOT LIKE POST: {execution_error}")
+        connection.rollback()
+        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Could not update user like in DB")
 
 
 def save_user_to_db(connection, cursor, new_user: CreateUser) -> list:
@@ -202,7 +299,7 @@ def save_user_to_db(connection, cursor, new_user: CreateUser) -> list:
     except Exception as hash_error:
         print(f"[{time_string}][!] UNABLE TO HASH NEW USER PASSWORD - {new_user.email}")
         print(f"[{time_string}]Error: {hash_error}")
-        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Couldn't create user, internal error")
+        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Could not create user, internal error")
 
     # check if user already exists
     try:
@@ -232,7 +329,7 @@ def save_user_to_db(connection, cursor, new_user: CreateUser) -> list:
     except Exception as execution_error:
         print(f"[{time_string}][!] COULD NOT CREATE NEW USER: {execution_error}")
         connection.rollback()
-        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Couldn't write user to DB")
+        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Could not write user to DB")
 
 
 def check_user_credentials(connection, cursor, user_credentials: LoginUser) -> dict:
@@ -244,7 +341,7 @@ def check_user_credentials(connection, cursor, user_credentials: LoginUser) -> d
         print(f"[{time_string}][!] UNABLE TO RETRIEVE USER DURING LOGIN - {user_credentials.username}")
         print(f"[{time_string}]Error: {hash_error}")
         connection.rollback()
-        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Couldn't login user, internal error")
+        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Could not login user, internal error")
 
     # first we check if user email exists
     if not found_user:
@@ -261,61 +358,4 @@ def check_user_credentials(connection, cursor, user_credentials: LoginUser) -> d
     print(f"[{time_string}][+] USER {user_credentials.username} IS NOW LOGGED IN")
     access_token = oauth2.create_access_token(data = {"user_id" : found_user['id']})
 
-    return {"access_token": access_token, "token_type": "bearer"}
-
-
-def save_user_like(connection, cursor, id: int, user_email: str) -> list:
-    print(id)
-    # check if post exists
-    try:
-        cursor.execute("""
-                    SELECT * FROM posts WHERE id = %s""", (str(id),))
-        found_post = cursor.fetchone()
-    except Exception as execution_error:
-        print(f"[{time_string}][!] COULD NOT FIND POST TO LIKE: {execution_error}")
-        connection.rollback()
-        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Couldn't find post to like in DB")
-
-    if not found_post:
-        print(f"[{time_string}][!] USER {user_email} TRYING TO LIKE A NON EXISTING POST")
-        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="This post doesn't exist")
-
-    # validation check
-    try:
-        cursor.execute("""
-                    Select x.id, post_id, liked_user_email 
-                    FROM posts x 
-                    JOIN likes y 
-                    ON x.id = y.post_id
-                    WHERE 		liked_user_email = %s 
-                                and post_id = %s""", (user_email, str(id)))
-        found_post = cursor.fetchone()
-    except Exception as execution_error:
-        print(f"[{time_string}][!] COULD NOT LIKE POST: {execution_error}")
-        connection.rollback()
-        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Couldn't find post in DB")
-
-    # check if already liked
-    if found_post:
-        print(f"[{time_string}][!] USER {user_email} TRYING TO LIKE A POST AGAIN")
-        raise HTTPException(status.HTTP_403_FORBIDDEN, detail="User already liked this post")
-
-    # execution check
-    try:
-        cursor.execute("""
-                    UPDATE posts 
-                    SET likes = likes + 1
-                    WHERE id = %s
-                    RETURNING id, title, content, owner_email, created_at, updated_at, likes""", (str(id),))
-        returning_post = cursor.fetchone()
-        connection.commit()
-        cursor.execute("""
-                    INSERT INTO likes (post_id, liked_user_email)
-                    VALUES (%s, %s)""", (str(id), user_email))
-        connection.commit()
-        print(f"[{time_string}][+] POST ID {id} WAS LIKED BY USER {user_email}")
-        return returning_post
-    except Exception as execution_error:
-        print(f"[{time_string}][!] COULD NOT LIKE POST: {execution_error}")
-        connection.rollback()
-        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Couldn't update user like in DB")
+    return {"access_token": access_token, "token_type": "bearer", "date_time" : time_string}

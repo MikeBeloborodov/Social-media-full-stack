@@ -7,10 +7,9 @@ class User(BaseModel):
     password: str
 
 
-class Post(BaseModel):
+class NewPost(BaseModel):
     title: str
     content: str
-    owner_email: EmailStr
 
 
 class LoginUser(BaseModel):
@@ -35,6 +34,7 @@ class UpdatedPost(BaseModel):
 class Token(BaseModel):
     access_token: str
     token_type: str
+    date_time: str
 
 
 class TokenData(BaseModel):
