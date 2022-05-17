@@ -1,6 +1,5 @@
 from pydantic import BaseModel, EmailStr
 from typing import Optional
-from sqlalchemy.sql.sqltypes import TIMESTAMP
 from datetime import datetime
 
 

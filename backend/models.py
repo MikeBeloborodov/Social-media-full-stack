@@ -16,7 +16,7 @@ class Post(Base):
     likes = Column(Integer, nullable=False, server_default=text('0'))
     owner_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
 
-    owner = relationship("User")
+    owner = relationship("User", lazy='subquery')
 
 class User(Base):
     __tablename__ = "users"
