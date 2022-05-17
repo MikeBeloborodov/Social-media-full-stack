@@ -36,14 +36,14 @@ def return_all_posts(connection, cursor, user_id) -> list:
     # execution check
     try:
         cursor.execute("""
-                SELECT x.id as post_id, 
+                SELECT x.id, 
+                    user_id,
                     title, 
                     content, 
-                    email,
                     x.created_at,
                     updated_at,
                     likes
-                    FROM posts x JOIN users y ON x.owner_email = y.email
+                    FROM posts x JOIN users y ON x.user_id = y.id
                     ORDER BY created_at DESC""")
         posts = cursor.fetchall()
     except Exception as execution_error:
@@ -64,7 +64,7 @@ def return_post_by_id(connection, cursor, id, user_id) -> list:
     # execution check
     try:
         cursor.execute("""
-                    SELECT id, title, content, owner_email, created_at, updated_at, likes
+                    SELECT id, user_id, title, content, created_at, updated_at, likes
                     FROM posts
                     WHERE id = %s""", (str(id),))
         post = cursor.fetchone()
@@ -99,9 +99,9 @@ def save_post_to_db(connection, cursor, new_post: NewPost, user_id) -> list:
     # execution check
     try:
         cursor.execute("""
-                    INSERT INTO posts (title, content, owner_email)
+                    INSERT INTO posts (title, content, user_id)
                     VALUES (%s, %s, %s)
-                    RETURNING id, title, content, owner_email, created_at, updated_at, likes""", (new_post.title, new_post.content, posting_user['email']))
+                    RETURNING id, user_id, title, content, created_at, updated_at, likes""", (new_post.title, new_post.content, posting_user['id']))
         returning_post = cursor.fetchone()
         connection.commit()
         print(f"[{time_string}][+] CREATED NEW POST - {new_post.title}")
@@ -142,7 +142,7 @@ def save_updated_post_by_id(connection, cursor, id, updated_post: UpdatedPost, u
 
     # validation check
     try:
-        if found_post['owner_email'] != updating_user['email']:
+        if found_post['user_id'] != updating_user['id']:
             print(f"[{time_string}][!] VALIDATION ERROR FROM USER ID {user_id} TO UPDATE POST")
             raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Wrong credentials")
     except Exception as evaluation_error:
@@ -157,7 +157,7 @@ def save_updated_post_by_id(connection, cursor, id, updated_post: UpdatedPost, u
                         content = %s,
                         updated_at = NOW()
                     WHERE id = %s
-                    RETURNING id, title, content, owner_email, created_at, updated_at, likes""", (updated_post.title, updated_post.content, str(id)))
+                    RETURNING id, user_id, title, content, created_at, updated_at, likes""", (updated_post.title, updated_post.content, str(id)))
         returning_post = cursor.fetchone()
         connection.commit()
         print(f"[{time_string}][+] UPDATED POST FROM USER ID {user_id} - {updated_post.title}")
@@ -198,7 +198,7 @@ def delete_post_from_db(connection, cursor, id, user_id) -> list:
 
     # validation check
     try:
-        if found_post['owner_email'] != deleting_user['email']:
+        if found_post['user_id'] != deleting_user['id']:
             print(f"[{time_string}][!] VALIDATION ERROR FROM USER ID {user_id} TO UPDATE POST")
             raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Wrong credentials")
     except Exception as evaluation_error:
@@ -210,7 +210,7 @@ def delete_post_from_db(connection, cursor, id, user_id) -> list:
         cursor.execute("""
                     DELETE FROM posts 
                     WHERE id = %s
-                    RETURNING id, title, content, owner_email, created_at, updated_at, likes""", (str(id),))
+                    RETURNING id, user_id, title, content, created_at, updated_at, likes""", (str(id),))
         deleted_post = cursor.fetchone()
         connection.commit()
         print(f"[{time_string}][+] DELETED POST FROM USER ID {user_id} - POST ID {id}")
@@ -253,12 +253,12 @@ def save_post_like_to_db(connection, cursor, id: int, user_id) -> list:
     # validation check
     try:
         cursor.execute("""
-                    Select x.id, post_id, liked_user_email 
+                    Select x.id, post_id, liked_user_id
                     FROM posts x 
                     JOIN likes y 
                     ON x.id = y.post_id
-                    WHERE 		liked_user_email = %s 
-                                and post_id = %s""", (liking_user['email'], str(id)))
+                    WHERE 		liked_user_id = %s 
+                                and post_id = %s""", (liking_user['id'], str(id)))
         found_post = cursor.fetchone()
     except Exception as execution_error:
         print(f"[{time_string}][!] COULD NOT LIKE POST: {execution_error}")
@@ -276,12 +276,12 @@ def save_post_like_to_db(connection, cursor, id: int, user_id) -> list:
                     UPDATE posts 
                     SET likes = likes + 1
                     WHERE id = %s
-                    RETURNING id, title, content, owner_email, created_at, updated_at, likes""", (str(id),))
+                    RETURNING id, user_id, title, content, created_at, updated_at, likes""", (str(id),))
         returning_post = cursor.fetchone()
         connection.commit()
         cursor.execute("""
-                    INSERT INTO likes (post_id, liked_user_email)
-                    VALUES (%s, %s)""", (str(id), liking_user['email']))
+                    INSERT INTO likes (post_id, liked_user_id)
+                    VALUES (%s, %s)""", (str(id), liking_user['id']))
         connection.commit()
         print(f"[{time_string}][+] POST ID {id} WAS LIKED BY USER ID {user_id}")
         return returning_post
