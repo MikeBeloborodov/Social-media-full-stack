@@ -2,11 +2,6 @@ from pydantic import BaseModel, EmailStr
 from typing import Optional
 
 
-class User(BaseModel):
-    email: EmailStr
-    password: str
-
-
 class NewPost(BaseModel):
     title: str
     content: str
@@ -20,10 +15,6 @@ class LoginUser(BaseModel):
 class CreateUser(BaseModel):
     email: EmailStr
     password: str
-
-
-class UpdateUser(BaseModel):
-    email: EmailStr
 
 
 class UpdatedPost(BaseModel):
