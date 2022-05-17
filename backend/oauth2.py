@@ -1,7 +1,7 @@
 from jose import JWTError, jwt
 from datetime import datetime, timedelta
 from settings import settings
-from models import *
+from schemas import *
 from fastapi import HTTPException, status, Depends
 from fastapi.security import OAuth2PasswordBearer
 from utils import time_stamp
