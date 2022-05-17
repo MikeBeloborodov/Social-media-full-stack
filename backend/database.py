@@ -32,15 +32,19 @@ def return_all_posts(connection, cursor, user_id) -> list:
     # execution check
     try:
         cursor.execute("""
-                SELECT x.id, 
+                SELECT 
+                    x.id, 
                     user_id,
+                    email as user_email,
                     title, 
                     content, 
                     x.created_at,
                     updated_at,
                     likes
-                    FROM posts x JOIN users y ON x.user_id = y.id
-                    ORDER BY created_at DESC""")
+                FROM posts x 
+                JOIN users y 
+                ON x.user_id = y.id
+                ORDER BY created_at DESC""")
         posts = cursor.fetchall()
     except Exception as execution_error:
         print(f"[{time_stamp()}][!] COULD NOT RETRIEVE DATA FROM DB: {execution_error}")
@@ -60,9 +64,20 @@ def return_post_by_id(connection, cursor, id, user_id) -> list:
     # execution check
     try:
         cursor.execute("""
-                    SELECT id, user_id, title, content, created_at, updated_at, likes
-                    FROM posts
-                    WHERE id = %s""", (str(id),))
+                SELECT 
+                    x.id,
+                    user_id,
+                    email as user_email,
+                    title,
+                    content,
+                    x.created_at,
+                    updated_at,
+                    likes
+                FROM posts x 
+                JOIN users y 
+                ON x.user_id = y.id
+                WHERE x.id = %s
+                ORDER BY created_at DESC""", (str(id),))
         post = cursor.fetchone()
     except Exception as execution_error:
         print(f"[{time_stamp()}][!] COULD NOT RETRIEVE DATA FROM DB: {execution_error}")
