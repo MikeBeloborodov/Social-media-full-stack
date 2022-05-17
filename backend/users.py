@@ -1,7 +1,11 @@
 from fastapi import APIRouter, Depends, status
 from fastapi.security import OAuth2PasswordRequestForm
+from sqlalchemy.orm import Session
 import database as db
-from models import *
+from schemas import *
+import orm_database
+import orm_functions
+
 
 router = APIRouter(
     tags=["User interaction"]
@@ -14,8 +18,11 @@ connection, cursor = db.postgres_database_connection()
 
 # registers new user
 @router.post("/register/", status_code=status.HTTP_201_CREATED)
-def create_new_user(new_user: CreateUser):
-    return db.save_user_to_db(connection, cursor, new_user)
+def create_new_user(new_user: CreateUser,
+                    db: Session = Depends(orm_database.get_db)):
+
+    #return db.save_user_to_db(connection, cursor, new_user)
+    return orm_functions.save_user_to_db(new_user, db)
 
 
 # login a user

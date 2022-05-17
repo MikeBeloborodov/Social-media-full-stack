@@ -1,6 +1,6 @@
 from fastapi import APIRouter, status, Depends
-from requests import Session
-import models
+from sqlalchemy.orm import Session
+from schemas import *
 import database
 import oauth2
 import orm_database
@@ -36,7 +36,7 @@ def send_post_by_id(id: int,
 
 # creates new post
 @router.post("/", status_code=status.HTTP_201_CREATED)
-def create_new_post(new_post: models.NewPost,
+def create_new_post(new_post: NewPost,
                     db: Session = Depends(orm_database.get_db), 
                     user_id: int = Depends(oauth2.get_current_user)):
     
@@ -46,7 +46,7 @@ def create_new_post(new_post: models.NewPost,
 # updates post by id
 @router.patch("/{id}", status_code=status.HTTP_201_CREATED)
 def update_post_by_id(id: int, 
-                    updated_post: models.UpdatedPost, 
+                    updated_post: UpdatedPost, 
                     db: Session = Depends(orm_database.get_db),
                     user_id: int = Depends(oauth2.get_current_user)):
 
