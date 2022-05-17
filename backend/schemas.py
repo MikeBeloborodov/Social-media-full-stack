@@ -4,6 +4,15 @@ from sqlalchemy.sql.sqltypes import TIMESTAMP
 from datetime import datetime
 
 
+class Owner(BaseModel):
+    id: int
+    email: EmailStr
+    created_at: datetime
+
+    class Config:
+        orm_mode = True
+
+
 class Post(BaseModel):
     id: int
     owner_id: int
@@ -12,6 +21,7 @@ class Post(BaseModel):
     created_at: datetime
     updated_at: datetime
     likes: int
+    owner: Owner
     
     class Config:
         orm_mode = True
@@ -29,6 +39,7 @@ class ResponseNewPost(BaseModel):
     created_at: datetime
     updated_at: datetime
     likes: int
+    owner: Owner
 
     class Config:
         orm_mode = True
@@ -47,6 +58,7 @@ class ResponseUpdatedPost(BaseModel):
     created_at: datetime
     updated_at: datetime
     likes: int
+    owner: Owner
 
     class Config:
         orm_mode = True

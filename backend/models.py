@@ -1,4 +1,5 @@
 from database import Base
+from sqlalchemy.orm import relationship
 from sqlalchemy import Column, ForeignKey, Integer, String
 from sqlalchemy.sql.sqltypes import TIMESTAMP
 from sqlalchemy.sql.expression import text
@@ -14,6 +15,8 @@ class Post(Base):
     updated_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=text('now()'))
     likes = Column(Integer, nullable=False, server_default=text('0'))
     owner_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+
+    owner = relationship("User")
 
 class User(Base):
     __tablename__ = "users"

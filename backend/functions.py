@@ -1,6 +1,4 @@
-from audioop import add
 import copy
-from msilib import schema
 import models
 from sqlalchemy.orm import Session
 from schemas import *
@@ -10,12 +8,19 @@ from passlib.context import CryptContext
 from datetime import datetime
 from fastapi.security import OAuth2PasswordRequestForm
 import oauth2
+from typing import Optional
+from sqlalchemy import or_
 
 
-def send_all_posts(db: Session, user_id: int) -> list:
+def retrieve_posts(db: Session, user_id: int, limit: int, skip: int, search: Optional[str]) -> list:
     # execution check
     try:
-        posts = db.query(models.Post).all()
+        posts = (db.query(models.Post)
+                    .filter(or_(models.Post.content.contains(search), models.Post.title.contains(search)))
+                    .order_by(models.Post.id)
+                    .offset(skip)
+                    .limit(limit)
+                    .all())
     except Exception as execution_error:
         print(f"[{time_stamp()}][!] COULD NOT RETRIEVE DATA FROM DB: {execution_error}")
         raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, 
@@ -31,7 +36,7 @@ def send_all_posts(db: Session, user_id: int) -> list:
     return posts
 
 
-def send_post_by_id(id: int, user_id: int, db: Session) -> dict:
+def retrieve_post_by_id(id: int, user_id: int, db: Session) -> dict:
     # execution check
     try:
         post = db.query(models.Post).filter(models.Post.id == id).first()
@@ -121,8 +126,9 @@ def save_post_like_to_db(id: int, db: Session, user_id: int) -> dict:
     
     # double like check
     try:
-        already_liked = db.query(models.Like).filter(models.Like.post_id == post.id and 
-                                                        models.Like.user_id == user_id).first()
+        already_liked = (db.query(models.Like)
+                        .filter(models.Like.post_id == post.id and models.Like.user_id == user_id)
+                        .first())
     except Exception as execution_error:
         print(f"[{time_stamp()}][!] ERROR DURING ACCESSING LIKE TABLE: {execution_error}")
         raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, 

@@ -4,7 +4,7 @@ import schemas
 import database
 import oauth2
 import functions
-from typing import List
+from typing import List, Optional
 
 
 router = APIRouter(
@@ -15,10 +15,13 @@ router = APIRouter(
 
 # sends all posts
 @router.get("/", status_code=status.HTTP_200_OK, response_model=List[schemas.Post])
-def send_all_posts(db: Session = Depends(database.get_db),
-                    user_id: int = Depends(oauth2.get_current_user)):
+def send_posts(db: Session = Depends(database.get_db),
+                    user_id: int = Depends(oauth2.get_current_user),
+                    limit: int = 10,
+                    skip: int = 0,
+                    search: Optional[str] = ""):
     
-    return functions.send_all_posts(db, user_id)
+    return functions.retrieve_posts(db, user_id, limit, skip, search)
 
 
 # sends post by id
@@ -27,7 +30,7 @@ def send_post_by_id(id: int,
                     user_id: int = Depends(oauth2.get_current_user),
                     db: Session = Depends(database.get_db)):
 
-   return functions.send_post_by_id(id, user_id, db)
+   return functions.retrieve_post_by_id(id, user_id, db)
 
 
 # creates new post
