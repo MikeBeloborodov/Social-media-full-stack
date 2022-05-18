@@ -1,4 +1,5 @@
-anyio==3.6.1  
+alembic==1.7.7
+anyio==3.6.1
 asgiref==3.5.1
 autopep8==1.6.0
 bcrypt==3.2.2
@@ -11,11 +12,13 @@ dnspython==2.2.1
 ecdsa==0.17.0
 email-validator==1.2.1
 fastapi==0.78.0
+greenlet==1.1.2
 h11==0.13.0
 httptools==0.4.0
 idna==3.3
 itsdangerous==2.1.2
 Jinja2==3.1.2
+Mako==1.2.0
 MarkupSafe==2.1.1
 orjson==3.6.8
 passlib==1.7.4
@@ -32,6 +35,7 @@ requests==2.27.1
 rsa==4.8
 six==1.16.0
 sniffio==1.2.0
+SQLAlchemy==1.4.36
 starlette==0.19.1
 toml==0.10.2
 typing_extensions==4.2.0

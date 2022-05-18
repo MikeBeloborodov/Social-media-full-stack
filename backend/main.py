@@ -1,12 +1,13 @@
 from fastapi import FastAPI 
 import posts
 import users
-from database import engine
+from .database import engine
 import models
 
 
 # sqalchemy creates tables
-models.Base.metadata.create_all(bind=engine)
+# models.Base.metadata.create_all(bind=engine)
+# we will use alembic from now on
 
 
 # app entry point

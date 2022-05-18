@@ -1,4 +1,5 @@
 from pydantic import BaseSettings
+import os
 
 
 class Settings(BaseSettings):
@@ -12,7 +13,7 @@ class Settings(BaseSettings):
     access_token_expire_minutes: str
 
     class Config:
-        env_file = ".env"
+        env_file = os.path.abspath(".\\backend\.env")
 
 
 settings = Settings()

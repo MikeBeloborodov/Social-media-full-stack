@@ -42,3 +42,7 @@ python-jose==3.3.0
 pyasn1==0.4.8
 ecdsa==0.17.0
 colorama==0.4.4
+SQLAlchemy==1.4.36
+Mako==1.2.0
+greenlet==1.1.2
+alembic==1.7.7

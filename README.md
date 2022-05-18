@@ -1,1 +1,1 @@
-Test project trying to replecate full stack social media app
+Test project trying to replicate full stack social media app

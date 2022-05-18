@@ -1,8 +1,8 @@
 import copy
 import models
 from sqlalchemy.orm import Session
-from schemas import *
-from utils import time_stamp
+from .schemas import *
+from .utils import time_stamp
 from fastapi import HTTPException, status
 from passlib.context import CryptContext
 from datetime import datetime
