@@ -1,9 +1,7 @@
 from fastapi import FastAPI 
 import posts
 import users
-from .database import engine
-import models
-
+from fastapi.middleware.cors import CORSMiddleware
 
 # sqalchemy creates tables
 # models.Base.metadata.create_all(bind=engine)
@@ -12,6 +10,21 @@ import models
 
 # app entry point
 app = FastAPI()
+
+
+# if you want only specific servers to be able to talk to your api
+# put them in origins, otherwise use "*" to allow everyone
+# origins = ["http://www.google.com"]
+origins = ["*"]
+
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 # main page
