@@ -1,9 +1,9 @@
 from fastapi import APIRouter, status, Depends
 from sqlalchemy.orm import Session
-import schemas
-import database
-import oauth2
-import functions
+from .logic import schemas
+from .logic import database
+from .logic import oauth2
+from .logic import functions
 from typing import List, Optional
 
 

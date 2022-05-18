@@ -1,5 +1,5 @@
 import copy
-import models
+from .models import *
 from sqlalchemy.orm import Session
 from .schemas import *
 from .utils import time_stamp
@@ -7,7 +7,7 @@ from fastapi import HTTPException, status
 from passlib.context import CryptContext
 from datetime import datetime
 from fastapi.security import OAuth2PasswordRequestForm
-import oauth2
+from .oauth2 import *
 from typing import Optional
 from sqlalchemy import or_
 
@@ -15,9 +15,9 @@ from sqlalchemy import or_
 def retrieve_posts(db: Session, user_id: int, limit: int, skip: int, search: Optional[str]) -> list:
     # execution check
     try:
-        posts = (db.query(models.Post)
-                    .filter(or_(models.Post.content.contains(search), models.Post.title.contains(search)))
-                    .order_by(models.Post.id)
+        posts = (db.query(Post)
+                    .filter(or_(Post.content.contains(search), Post.title.contains(search)))
+                    .order_by(Post.id)
                     .offset(skip)
                     .limit(limit)
                     .all())
@@ -39,7 +39,7 @@ def retrieve_posts(db: Session, user_id: int, limit: int, skip: int, search: Opt
 def retrieve_post_by_id(id: int, user_id: int, db: Session) -> dict:
     # execution check
     try:
-        post = db.query(models.Post).filter(models.Post.id == id).first()
+        post = db.query(Post).filter(Post.id == id).first()
     except Exception as execution_error:
         print(f"[{time_stamp()}][!] COULD NOT RETRIEVE DATA FROM DB: {execution_error}")
         raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, 
@@ -59,7 +59,7 @@ def save_new_post_to_db(new_post: NewPost, db: Session, user_id: int) -> dict:
     # execution check
     try:
         # ** will unpack this dict in key=value format
-        post_to_save = models.Post(**new_post.dict(), owner_id=user_id)
+        post_to_save = Post(**new_post.dict(), owner_id=user_id)
         db.add(post_to_save)
         db.commit()
         db.refresh(post_to_save)
@@ -75,7 +75,7 @@ def save_new_post_to_db(new_post: NewPost, db: Session, user_id: int) -> dict:
 def save_updated_post_by_id(id: int, updated_post: UpdatedPost, db: Session, user_id: int):
     # execution check
     try:
-        post_query = db.query(models.Post).filter(models.Post.id == id)
+        post_query = db.query(Post).filter(Post.id == id)
         post = post_query.first()
     except Exception as execution_error:
         print(f"[{time_stamp()}][!] COULD NOT RETRIEVE DATA FROM DB: {execution_error}")
@@ -111,7 +111,7 @@ def save_updated_post_by_id(id: int, updated_post: UpdatedPost, db: Session, use
 def save_post_like_to_db(id: int, db: Session, user_id: int) -> dict:
     # execution check
     try:
-        post_query = db.query(models.Post).filter(models.Post.id == id)
+        post_query = db.query(Post).filter(Post.id == id)
         post = post_query.first()
     except Exception as execution_error:
         print(f"[{time_stamp()}][!] COULD NOT FIND POST TO LIKE: {execution_error}")
@@ -126,8 +126,8 @@ def save_post_like_to_db(id: int, db: Session, user_id: int) -> dict:
     
     # double like check
     try:
-        already_liked = (db.query(models.Like)
-                        .filter(models.Like.post_id == post.id and models.Like.user_id == user_id)
+        already_liked = (db.query(Like)
+                        .filter(Like.post_id == post.id and Like.user_id == user_id)
                         .first())
     except Exception as execution_error:
         print(f"[{time_stamp()}][!] ERROR DURING ACCESSING LIKE TABLE: {execution_error}")
@@ -140,7 +140,7 @@ def save_post_like_to_db(id: int, db: Session, user_id: int) -> dict:
 
     # execute update
     try:
-        post_query.update({"likes": models.Post.likes + 1}, synchronize_session=False)
+        post_query.update({"likes": Post.likes + 1}, synchronize_session=False)
         db.commit()
         db.refresh(post)
     except Exception as execution_error:
@@ -150,7 +150,7 @@ def save_post_like_to_db(id: int, db: Session, user_id: int) -> dict:
     
     # save like to the table
     try:
-        db.add(models.Like(post_id=post.id, user_id=user_id))
+        db.add(Like(post_id=post.id, user_id=user_id))
         db.commit()
     except Exception as execution_error:
         print(f"[{time_stamp()}][!] COULD NOT ADD LIKE TO A TABLE: {execution_error}")
@@ -164,7 +164,7 @@ def save_post_like_to_db(id: int, db: Session, user_id: int) -> dict:
 def delete_post_from_db(id: int, db: Session, user_id: int) -> dict:
     # execution check
     try:
-        post_query = db.query(models.Post).filter(models.Post.id == id)
+        post_query = db.query(Post).filter(Post.id == id)
         post = copy.deepcopy(post_query.first())
     except Exception as execution_error:
         print(f"[{time_stamp()}][!] COULD NOT EXTRACT POST FROM DB TO DELETE: {execution_error}")
@@ -207,7 +207,7 @@ def save_user_to_db(new_user: CreateUser, db: Session ) ->dict:
 
     # check if user already exists
     try:
-        user_query = db.query(models.User).filter(models.User.email == new_user.email)
+        user_query = db.query(User).filter(User.email == new_user.email)
         found_user = user_query.first()
     except Exception as user_validation_error:
         print(f"[{time_stamp()}][!] ERROR DURING USER SEARCH IN DB - {new_user.email}")
@@ -221,7 +221,7 @@ def save_user_to_db(new_user: CreateUser, db: Session ) ->dict:
     # execution check
     try:
         # ** will unpack this dict in key=value format
-        user_to_save = models.User(**new_user.dict())
+        user_to_save = User(**new_user.dict())
         db.add(user_to_save)
         db.commit()
         db.refresh(user_to_save)
@@ -237,7 +237,7 @@ def save_user_to_db(new_user: CreateUser, db: Session ) ->dict:
 def login_check_credentials(user_credentials: OAuth2PasswordRequestForm, db: Session):
     # retrieve user from db
     try:
-        user_query = db.query(models.User).filter(models.User.email == user_credentials.username)
+        user_query = db.query(User).filter(User.email == user_credentials.username)
         found_user = user_query.first()
     except Exception as user_validation_error:
         print(f"[{time_stamp()}][!] ERROR DURING USER SEARCH IN DB - {user_credentials.username}")
@@ -256,6 +256,6 @@ def login_check_credentials(user_credentials: OAuth2PasswordRequestForm, db: Ses
 
     # if everything is okay we send data back
     print(f"[{time_stamp()}][+] USER {user_credentials.username} IS NOW LOGGED IN")
-    access_token = oauth2.create_access_token(data = {"user_id" : found_user.id})
+    access_token = create_access_token(data = {"user_id" : found_user.id})
 
     return {"access_token": access_token, "token_type": "bearer", "date_time" : time_stamp()}

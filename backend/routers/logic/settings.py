@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     access_token_expire_minutes: str
 
     class Config:
-        env_file = os.path.abspath(".\\backend\.env")
+        env_file = ('.env')
 
 
 settings = Settings()

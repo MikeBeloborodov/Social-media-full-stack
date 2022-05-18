@@ -1,6 +1,6 @@
 from fastapi import FastAPI 
-import posts
-import users
+import routers.posts as posts
+import routers.users as users
 from fastapi.middleware.cors import CORSMiddleware
 
 # sqalchemy creates tables
