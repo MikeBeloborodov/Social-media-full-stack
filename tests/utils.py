@@ -1,6 +1,16 @@
 from sqlalchemy.orm import Session
-from backend.routers.logic.database import engine
+from database import engine as test_engine
+from database import Test_environment
+from backend.routers.logic.database import engine as real_engine
 from backend.routers.logic import models
+
+
+
+if Test_environment:
+    engine = test_engine
+else:
+    engine = real_engine
+
 
 def delete_test_user(email: str = 'admin@mail.com'):
     with Session(engine) as session:

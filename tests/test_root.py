@@ -1,5 +1,15 @@
 from backend.main import app
 from fastapi.testclient import TestClient
+from database import override_get_db, engine, Test_environment
+from backend.routers.logic.database import get_db, Base
+
+
+if Test_environment:
+    # creates test database if it doesn't exist
+    Base.metadata.create_all(bind=engine)
+
+    # override_get_db function to run tests on test database
+    app.dependency_overrides[get_db] = override_get_db
 
 
 client = TestClient(app)

@@ -2,9 +2,10 @@ from fastapi import FastAPI
 from .routers import posts as posts
 from . routers import users as users
 from fastapi.middleware.cors import CORSMiddleware
+from backend.routers.logic.database import Base, engine
 
 # sqalchemy creates tables
-# models.Base.metadata.create_all(bind=engine)
+# Base.metadata.create_all(bind=engine)
 # we will use alembic from now on
 
 
