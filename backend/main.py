@@ -1,6 +1,6 @@
 from fastapi import FastAPI 
 from .routers import posts as posts
-from . routers import users as users
+from .routers import users as users
 from fastapi.middleware.cors import CORSMiddleware
 from backend.routers.logic.database import Base, engine
 

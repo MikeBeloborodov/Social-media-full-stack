@@ -195,7 +195,7 @@ def delete_post_from_db(id: int, db: Session, user_id: int) -> dict:
     return post
     
 
-def save_user_to_db(new_user: CreateUser, db: Session ) ->dict:
+def save_user_to_db(new_user: CreateUser, db: Session ) -> dict:
      # hash password
     try:
         pwd_context = CryptContext(schemes=['bcrypt'])
