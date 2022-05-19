@@ -1,8 +1,8 @@
-import pytest
 from backend.main import app
 from fastapi.testclient import TestClient
 from backend.routers.logic import schemas
 import utils
+import pytest
 
 
 client = TestClient(app)
@@ -23,8 +23,8 @@ def test_status():
     assert res.status_code == 201
 
 
-# test response object
-def test_response():
+# test response object on register
+def test_response_register():
     res = client.post("/register/", json={"email": "admin@mail.com", "password": "admin"})
     utils.delete_test_user()
     new_user = schemas.ResponseCreateUser(**res.json())
@@ -40,7 +40,7 @@ def test_double_creation():
     assert res.status_code == 403
 
 
-# test creating ten users in a row
+# test creating many users in a row
 @pytest.mark.parametrize("login, password",[(f"admin{a}@mail.com", f"admin{a}") for a in range(USERS_AMOUNT)])
 def test_create_users(login, password):
     res = client.post("/register/", json={"email": login, "password": password})
@@ -48,7 +48,7 @@ def test_create_users(login, password):
     assert res.status_code == 201
 
 
-# test if response data and data in our base are the same
+# test if response data and data in our database is the same
 def test_created_user_profile():
     res = client.post("/register/", json={"email": "admin@mail.com", "password": "admin"})
     user = utils.get_test_user()
@@ -74,9 +74,10 @@ def test_login_response():
     login = client.post("/login/", data={"username": "admin@mail.com", "password": "admin"})
     utils.delete_test_user()
     login_info = schemas.Token(**login.json())
+    assert login_info.token_type == "bearer"
 
 
-# test login 10 users
+# test login many users at once
 @pytest.mark.parametrize("login, password",[(f"admin{a}@mail.com", f"admin{a}") for a in range(USERS_AMOUNT)])
 def test_login_users(login, password):
     res = client.post("/register/", json={"email": login, "password": password})

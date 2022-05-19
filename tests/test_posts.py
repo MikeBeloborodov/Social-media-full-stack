@@ -1,10 +1,8 @@
-from ctypes import util
-import secrets
-import pytest
 from backend.main import app
 from fastapi.testclient import TestClient
 from backend.routers.logic import schemas
 import utils
+import pytest
 
 
 client = TestClient(app)
@@ -25,7 +23,7 @@ def test_client_posts():
     assert type(client) == TestClient
 
 
-# create and login ten users for tests
+# create and login many users for tests
 @pytest.mark.parametrize("login, password",
                         [(f"admin{a}@mail.com", f"admin{a}") for a in range(USERS_AMOUNT)])
 def test_create_login_users(login, password):
