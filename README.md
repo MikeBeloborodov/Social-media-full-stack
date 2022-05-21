@@ -6,8 +6,10 @@ All commands from the root folder:
 to start server
 uvicorn backend.main:app
 
-to start tests
+to start tests (start in the root folder)
 python -m pytest -v
 
 to check alembic
 alembic current
+
+
