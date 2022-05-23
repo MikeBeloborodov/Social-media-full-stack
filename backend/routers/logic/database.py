@@ -4,13 +4,16 @@ from sqlalchemy.orm import sessionmaker
 from .settings import settings
 from .schemas import *
 
+# this is for heroku deploy
+SQLALCHEMY_DATABASE_URL = settings.database_url
 
+""" This is for local tests
 SQLALCHEMY_DATABASE_URL = (f"postgresql://"
                             f"{settings.database_username}:"
                             f"{settings.database_password}@"
                             f"{settings.database_hostname}/"
                             f"{settings.database_name}")
-
+"""
 
 engine = create_engine(SQLALCHEMY_DATABASE_URL)
 
