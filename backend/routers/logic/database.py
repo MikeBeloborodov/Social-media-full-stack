@@ -5,7 +5,7 @@ from .settings import settings
 from .schemas import *
 
 # this is for heroku deploy
-SQLALCHEMY_DATABASE_URL = settings.database_url
+SQLALCHEMY_DATABASE_URL = "postgresql" + settings.database_url[8:]
 
 """ This is for local tests
 SQLALCHEMY_DATABASE_URL = (f"postgresql://"

@@ -11,7 +11,7 @@ import backend.routers.logic.settings as settings_module
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
-config.set_main_option("sqlalchemy.url", settings_module.settings.database_url)
+config.set_main_option("sqlalchemy.url", "postgresql" + settings_module.settings.database_url[8:])
 
 
 """ This is for testing localy
