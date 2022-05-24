@@ -17,7 +17,7 @@ def retrieve_posts(db: Session, user_id: int, limit: int, skip: int, search: Opt
     try:
         posts = (db.query(models.Post)
                     .filter(or_(models.Post.content.contains(search), models.Post.title.contains(search)))
-                    .order_by(models.Post.id)
+                    .order_by(models.Post.id.desc())
                     .offset(skip)
                     .limit(limit)
                     .all())
